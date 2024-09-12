@@ -1,6 +1,11 @@
 # TG_media_downloader
 Download and send media from private groups with restricted resending/downloading
 
+## Downloading
+```bash
+git clone https://github.com/chelaxian/TG_media_downloader
+```
+
 ## Installation
 ```bash
 pip install -r requirements.txt
