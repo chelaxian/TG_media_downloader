@@ -1,6 +1,8 @@
 from telethon import TelegramClient, events
+from telethon.tl.types import DocumentAttributeVideo, InputMediaUploadedDocument
 import re
 import os
+from moviepy.editor import VideoFileClip
 
 # Вставьте свои данные
 api_id = 'ваш_api_id'
@@ -11,6 +13,16 @@ bot_token = 'ваш_bot_token'
 target_group_id = 'ваш_group_id'
 
 client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
+
+def create_thumbnail(file_path):
+    try:
+        video = VideoFileClip(file_path)
+        thumb_path = file_path.rsplit(".", 1)[0] + ".jpg"
+        video.save_frame(thumb_path, t=1.0)
+        return thumb_path
+    except Exception as e:
+        print(f"Error creating thumbnail for {file_path}: {e}")
+        return None
 
 async def download_and_send_media(event, chat_id, message_id):
     try:
@@ -27,10 +39,41 @@ async def download_and_send_media(event, chat_id, message_id):
         if message.media:
             # Указываем путь для загрузки в /tmp
             file_path = await message.download_media(file='/tmp/')
+            thumb_path = None  # Инициализируем переменную заранее
             if file_path:
-                # Отправляем медиафайл только в личный чат с пользователем
-                await event.respond('Медиафайл загружен:', file=file_path)
-                os.remove(file_path)  # Удаляем файл после отправки
+                # Проверяем размер файла и создаем превью, если он больше 10 MB
+                if os.path.getsize(file_path) > 10 * 1024 * 1024:  # 10 MB
+                    thumb_path = create_thumbnail(file_path)
+                    # Получаем информацию о видео (продолжительность, ширина, высота)
+                    video = VideoFileClip(file_path)
+                    duration = int(video.duration)
+                    width, height = video.size
+                    video.close()
+
+                    # Загружаем видео и его превью в Telegram
+                    uploaded_video = await client.upload_file(file_path)
+                    uploaded_thumb = await client.upload_file(thumb_path) if thumb_path else None
+
+                    # Создаем InputMediaUploadedDocument для корректной отправки видео с превью
+                    attributes = [DocumentAttributeVideo(duration=duration, w=width, h=height, supports_streaming=True)]
+                    media = InputMediaUploadedDocument(
+                        file=uploaded_video,
+                        mime_type='video/mp4',
+                        attributes=attributes,
+                        thumb=uploaded_thumb
+                    )
+
+                    # Отправляем медиафайл только в личный чат с пользователем
+                    await client.send_file(event.chat_id, file=media)
+                else:
+                    # Если видео меньше 10MB, просто отправляем его
+                    await client.send_file(event.chat_id, file=file_path)
+                
+                # Удаляем временные файлы после отправки
+                os.remove(file_path)
+                if thumb_path:
+                    os.remove(thumb_path)  # Удаляем превью после отправки
+                
                 print(f"Медиафайл {file_path} успешно загружен и отправлен.")
             else:
                 await event.respond('Не удалось загрузить медиафайл.')
