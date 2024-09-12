@@ -16,6 +16,17 @@ target_group_id = 'ваш_group_id'
 
 client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
 
+# Загрузка списка ACL из файла
+def load_acl():
+    try:
+        with open('acl.txt', 'r') as file:
+            return set(line.strip() for line in file if line.strip())
+    except FileNotFoundError:
+        print("Файл acl.txt не найден. Бот будет отвечать всем.")
+        return set()
+
+acl_list = load_acl()
+
 # Генерация превью для длинных видео
 def create_thumbnail(file_path):
     try:
@@ -26,6 +37,13 @@ def create_thumbnail(file_path):
     except Exception as e:
         print(f"Error creating thumbnail for {file_path}: {e}")
         return None
+
+# Проверка пользователя по ACL
+def is_user_allowed(user):
+    # Проверка ID пользователя, никнейма и номера телефона
+    return (str(user.id) in acl_list or 
+            user.username and f"@{user.username}" in acl_list or 
+            user.phone and f"+{user.phone}" in acl_list)
 
 async def download_and_send_media(event, chat_id, message_id):
     try:
@@ -91,7 +109,12 @@ async def download_and_send_media(event, chat_id, message_id):
 @client.on(events.NewMessage(pattern=r'https://t\.me/c/\d+/(\d+)', incoming=True))
 async def handler(event):
     # Убедимся, что бот реагирует только на сообщения из личных чатов
-    if event.is_private: 
+    if event.is_private:
+        sender = await event.get_sender()
+        if not is_user_allowed(sender):
+            print(f"Пользователь {sender.id} не имеет доступа.")
+            return
+
         # Парсинг ссылки
         match = re.search(r'https://t\.me/c/(\d+)/(\d+)', event.text)
         if match:
