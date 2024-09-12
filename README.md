@@ -43,8 +43,12 @@ Fill in gotten data in `tg_dl_bot.py` and in `get_IDs.py` code here
 
 Manually add allowed users ID/nickname/phone number to `acl.txt` or run `python3 get_IDs.py` to automatocaly get users ID from group (you need admin rights).
 ```diff
-# Вставьте свои данные
-
+-123456789  # укажи ID пользователя
+-@username  # или Никнейм
+-+1234567890  # или Номер телефона
++7654321
++@ivanov_ivan
+++79261234567
 ```
 
 ## Running
