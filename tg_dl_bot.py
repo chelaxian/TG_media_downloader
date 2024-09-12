@@ -14,6 +14,7 @@ target_group_id = 'ваш_group_id'
 
 client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
 
+# Генерация превью для длинных видео
 def create_thumbnail(file_path):
     try:
         video = VideoFileClip(file_path)
@@ -63,10 +64,10 @@ async def download_and_send_media(event, chat_id, message_id):
                         thumb=uploaded_thumb
                     )
 
-                    # Отправляем медиафайл только в личный чат с пользователем
+                    # Отправляем обработанный медиафайл в личный чат бота с пользователем
                     await client.send_file(event.chat_id, file=media)
                 else:
-                    # Если видео меньше 10MB, просто отправляем его
+                    # Если видео меньше 10MB, отправляем оригинал
                     await client.send_file(event.chat_id, file=file_path)
                 
                 # Удаляем временные файлы после отправки
