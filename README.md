@@ -7,14 +7,14 @@ pip install -r requirements.txt
 ```
 ## Settings
 
-Get API ID and API HASH here
-`https://my.telegram.org/apps`
+Get API ID and API HASH here \
+https://my.telegram.org/apps
 
-Create bot and Get Bothfather Token here
-`https://t.me/BotFather`
+Create bot and Get Bothfather Token here \
+https://t.me/BotFather
 
-Add bot to your private group and this Get Group ID here
-`https://t.me/getmy_idbot`
+Add bot to your private group and this Get Group ID here \
+https://t.me/getmy_idbot
 
 Fill in gotten data in code here
 ```diff
