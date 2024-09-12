@@ -1,14 +1,14 @@
 from telethon import TelegramClient
+import json
 import os
 
-#=================================================================================================
-# Вставьте свои данные
-api_id = 'ваш_api_id'
-api_hash = 'ваш_api_hash'
+# Загрузка конфигурации из файла config.json
+with open('config.json', 'r') as config_file:
+    config = json.load(config_file)
 
-# Укажите ID группы без -100 в начале, из которой нужно получить всех участников
-target_group_id = 'ваш_group_id'
-#=================================================================================================
+api_id = config['api_id']
+api_hash = config['api_hash']
+target_group_id = config['target_group_id']
 
 # Создаем клиент для подключения от вашего аккаунта
 client = TelegramClient('session_name', api_id, api_hash)
