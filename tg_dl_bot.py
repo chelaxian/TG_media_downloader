@@ -4,6 +4,7 @@ import re
 import os
 from moviepy.editor import VideoFileClip
 
+#=================================================================================================
 # Вставьте свои данные
 api_id = 'ваш_api_id'
 api_hash = 'ваш_api_hash'
@@ -11,6 +12,7 @@ bot_token = 'ваш_bot_token'
 
 # Укажите ID группы без -100 в начале, с которой бот должен работать (бот должен быть её членом)
 target_group_id = 'ваш_group_id'
+#=================================================================================================
 
 client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
 
