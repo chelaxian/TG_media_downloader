@@ -1,18 +1,19 @@
-from telethon import TelegramClient, events
-from telethon.tl.types import DocumentAttributeVideo, InputMediaUploadedDocument
 import re
 import os
+import json
 from moviepy.editor import VideoFileClip
+from telethon import TelegramClient, events
+from telethon.tl.types import DocumentAttributeVideo, InputMediaUploadedDocument
 
-#=================================================================================================
-# Вставьте свои данные
-api_id = 'ваш_api_id'
-api_hash = 'ваш_api_hash'
-bot_token = 'ваш_bot_token'
+# Загрузка конфигурации из файла config.json
+with open('config.json', 'r') as config_file:
+    config = json.load(config_file)
 
-# Укажите ID группы без -100 в начале, с которой бот должен работать (бот должен быть её членом)
-target_group_id = 'ваш_group_id'
-#=================================================================================================
+# Загрузка данных из файла конфигурации
+api_id = config['api_id']
+api_hash = config['api_hash']
+bot_token = config['bot_token']
+target_group_id = config['target_group_id']
 
 client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
 
