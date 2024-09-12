@@ -25,7 +25,7 @@ https://t.me/getmy_idbot
 
 Fill in gotten data in `config.json` code here
 ```diff
-# Вставьте свои данные
+// Вставьте свои данные
 {
 -  "api_id": "ваш_api_id",
 -  "api_hash": "ваш_api_hash",
@@ -36,9 +36,9 @@ Fill in gotten data in `config.json` code here
 +  "bot_token": "12345678:ABcdef_ABcfed12345678912345679",
 +  "target_group_id": "234567890"
 }
-# Укажите ID группы без -100 в начале, с которой бот должен работать (бот должен быть её членом)
--# -100234567890
-+# 234567890
+// Укажите ID группы без -100 в начале, с которой бот должен работать (бот должен быть её членом)
+-// -100234567890
++// 234567890
 ```
 
 Manually add allowed users ID/nickname/phone number to `acl.txt` or run `python3 get_IDs.py` to automatocaly get users ID from group (you need admin rights).
