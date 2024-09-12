@@ -1,5 +1,5 @@
 # TG_media_downloader
-Download and send media from private groups with restricted resending/downloading
+Download and send media from private groups with restricted resending/downloading (you need to add bot to this group)
 
 ## Downloading
 ```bash
