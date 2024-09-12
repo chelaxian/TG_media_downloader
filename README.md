@@ -18,7 +18,7 @@ https://my.telegram.org/apps
 Create bot and Get Bothfather Token here \
 https://t.me/BotFather
 
-Allow Groups and Groups Privacy to that bot in Botfather's Bot settings \
+Allow Groups and Groups Privacy to that bot in Botfather's Bot settings 
 
 Add bot to your private group and Get this Group ID here \
 https://t.me/getmy_idbot
