@@ -45,7 +45,8 @@ Fill in gotten data in `config.json` code here
 +// 234567890
 
 ```
-(OPTIONAL) If you want to give access to users OUTSIDE the group - manually add allowed users ID/nickname/phone number to `acl.txt` or run `python3 get_IDs.py` to automatocaly get users ID from group (you need admin rights).
+##  (OPTIONAL) 
+If you want to give access to users OUTSIDE the group - manually add allowed users ID/nickname/phone number to `acl.txt` or run `python3 get_IDs.py` to automatocaly get users ID from group (you need admin rights).
 ```diff
 -123456789  # укажи ID пользователя
 -@username  # или Никнейм
