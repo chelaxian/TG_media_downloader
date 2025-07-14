@@ -4,12 +4,13 @@ import json
 from moviepy.editor import VideoFileClip
 from telethon import TelegramClient, events
 from telethon.tl.types import DocumentAttributeVideo, InputMediaUploadedDocument
+from telethon.tl.functions.channels import GetParticipantRequest
+from telethon.errors import UserNotParticipantError
 
 # Загрузка конфигурации из файла config.json
 with open('config.json', 'r') as config_file:
     config = json.load(config_file)
 
-# Загрузка данных из файла конфигурации
 api_id = config['api_id']
 api_hash = config['api_hash']
 bot_token = config['bot_token']
@@ -23,7 +24,7 @@ def load_acl():
         with open('acl.txt', 'r') as file:
             return set(line.strip() for line in file if line.strip())
     except FileNotFoundError:
-        print("Файл acl.txt не найден. Бот будет отвечать всем.")
+        print("ACL file not found. Bot will respond only to group members.")
         return set()
 
 acl_list = load_acl()
@@ -39,64 +40,78 @@ def create_thumbnail(file_path):
         print(f"Error creating thumbnail for {file_path}: {e}")
         return None
 
-# Проверка пользователя по ACL
-def is_user_allowed(user):
-    # Проверка ID пользователя, никнейма и номера телефона
-    return (str(user.id) in acl_list or 
-            user.username and f"@{user.username}" in acl_list or 
-            user.phone and f"+{user.phone}" in acl_list)
+# Синхронная проверка ACL
+def is_in_acl(user):
+    return (str(user.id) in acl_list or
+            (user.username and f"@{user.username}" in acl_list) or
+            (user.phone and f"+{user.phone}" in acl_list))
+
+# Асинхронная проверка членства в группе
+async def is_group_member(user_id):
+    """
+    Returns True if user_id is a member of target_group_id, else False.
+    """
+    chat_id = int(f'-100{target_group_id}')
+    try:
+        # Проверяем участника через GetParticipantRequest
+        await client(GetParticipantRequest(channel=chat_id, participant=user_id))
+        return True
+    except UserNotParticipantError:
+        return False
+    except Exception as e:
+        print(f"Error checking membership for {user_id}: {e}")
+        return False
 
 async def download_and_send_media(event, chat_id, message_id):
     try:
-        # Получаем сообщение с указанным ID
         message = await client.get_messages(chat_id, ids=message_id)
-
-        if message is None:
-            await event.respond('Не удалось получить сообщение. Возможно, у бота нет прав на доступ к этому сообщению.')
-            print('Сообщение не найдено.')
+        if not message:
+            await event.respond('Не удалось получить сообщение. Возможно, у бота нет прав.')
+            print('Message not found.')
             return
 
-        print(f"Сообщение найдено: {message.id}")
-
         if message.media:
-            # Указываем путь для загрузки в /tmp
             file_path = await message.download_media(file='/tmp/')
-            thumb_path = None  # Инициализируем переменную заранее
+            thumb_path = None  # initialize thumbnail path
+
             if file_path:
-                # Проверяем размер файла и создаем превью, если он больше 10 MB
-                if os.path.getsize(file_path) > 10 * 1024 * 1024:  # 10 MB
+                # If file is larger than 10 MB — create thumbnail
+                if os.path.getsize(file_path) > 10 * 1024 * 1024:
                     thumb_path = create_thumbnail(file_path)
-                    # Получаем информацию о видео (продолжительность, ширина, высота)
+
+                    # extract video info
                     video = VideoFileClip(file_path)
                     duration = int(video.duration)
                     width, height = video.size
                     video.close()
 
-                    # Загружаем видео и его превью в Telegram
+                    # upload files
                     uploaded_video = await client.upload_file(file_path)
                     uploaded_thumb = await client.upload_file(thumb_path) if thumb_path else None
 
-                    # Создаем InputMediaUploadedDocument для корректной отправки видео с превью
-                    attributes = [DocumentAttributeVideo(duration=duration, w=width, h=height, supports_streaming=True)]
+                    # prepare attributes and send with thumb
+                    attributes = [
+                        DocumentAttributeVideo(
+                            duration=duration, w=width, h=height, supports_streaming=True
+                        )
+                    ]
                     media = InputMediaUploadedDocument(
                         file=uploaded_video,
                         mime_type='video/mp4',
                         attributes=attributes,
                         thumb=uploaded_thumb
                     )
-
-                    # Отправляем обработанный медиафайл в личный чат бота с пользователем
                     await client.send_file(event.chat_id, file=media)
                 else:
-                    # Если видео меньше 10MB, отправляем оригинал
+                    # send original if <= 10 MB
                     await client.send_file(event.chat_id, file=file_path)
-                
-                # Удаляем временные файлы после отправки
+
+                # cleanup temp files
                 os.remove(file_path)
-                if thumb_path:
-                    os.remove(thumb_path)  # Удаляем превью после отправки
-                
-                print(f"Медиафайл {file_path} успешно загружен и отправлен.")
+                if thumb_path and os.path.exists(thumb_path):
+                    os.remove(thumb_path)
+
+                print(f"Media {file_path} sent successfully.")
             else:
                 await event.respond('Не удалось загрузить медиафайл.')
                 print("Не удалось загрузить медиафайл.")
@@ -104,48 +119,44 @@ async def download_and_send_media(event, chat_id, message_id):
             await event.respond('В указанном сообщении нет медиафайла.')
             print("В указанном сообщении нет медиафайла.")
     except Exception as e:
-        await event.respond(f'Ошибка при загрузке медиафайла: {str(e)}')
-        print(f'Ошибка: {str(e)}')
+        await event.respond(f'Ошибка при загрузке медиафайла: {e}')
+        print(f'Error: {e}')
+
 
 @client.on(events.NewMessage(pattern=r'https://t\.me/c/\d+/(\d+)', incoming=True))
 async def handler(event):
-    # Убедимся, что бот реагирует только на сообщения из личных чатов
-    if event.is_private:
-        sender = await event.get_sender()
-        if not is_user_allowed(sender):
-            print(f"Пользователь {sender.id} не имеет доступа.")
-            return
+    if not event.is_private:
+        return
 
-        # Парсинг ссылки
-        match = re.search(r'https://t\.me/c/(\d+)/(\d+)', event.text)
-        if match:
-            group_id = match.group(1)
-            message_id = int(match.group(2))
+    sender = await event.get_sender()
+    user_id = sender.id
 
-            # Проверяем, что группа соответствует указанному target_group_id
-            if group_id != target_group_id:
-                await event.respond('Ссылки из этой группы не разрешены.')
-                print(f'Ссылка из группы {group_id} отклонена.')
-                return
+    # Доступ, если в ACL или член target_group
+    if not (is_in_acl(sender) or await is_group_member(user_id)):
+        print(f"Access denied for user {user_id}")
+        return
 
-            chat_id = int('-100' + group_id)  # Преобразование в формат идентификатора группы
+    match = re.search(r'https://t\.me/c/(\d+)/(\d+)', event.text)
+    if not match:
+        await event.respond('Неверная ссылка. Формат: https://t.me/c/ID/MessageID')
+        return
 
-            print(f"Получен запрос для группы {chat_id} и сообщения {message_id}")
+    group_id, message_id = match.group(1), int(match.group(2))
+    if group_id != target_group_id:
+        await event.respond('Ссылки из этой группы не разрешены.')
+        print(f'Link from group {group_id} rejected.')
+        return
 
-            # Проверка на возможность доступа к чату
-            try:
-                entity = await client.get_entity(chat_id)
-                print(f"Доступ к чату {entity.title} подтвержден.")
-            except Exception as e:
-                await event.respond(f'Ошибка доступа к чату: {str(e)}')
-                print(f'Ошибка доступа к чату: {str(e)}')
-                return
+    chat_id = int(f'-100{group_id}')
+    try:
+        entity = await client.get_entity(chat_id)
+        print(f"Access to chat {entity.title} confirmed.")
+    except Exception as e:
+        await event.respond(f'Ошибка доступа к чату: {e}')
+        print(f'Chat access error: {e}')
+        return
 
-            # Вызов функции для загрузки и отправки медиа
-            await download_and_send_media(event, chat_id, message_id)
-        else:
-            await event.respond('Неверная ссылка. Пожалуйста, отправьте ссылку в формате https://t.me/c/ID/MessageID.')
-            print('Неверная ссылка. Пожалуйста, отправьте ссылку в формате https://t.me/c/ID/MessageID.')
+    await download_and_send_media(event, chat_id, message_id)
 
-print("Бот запущен...")
+print("Bot is running...")
 client.run_until_disconnected()
